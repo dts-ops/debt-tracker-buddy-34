@@ -1,0 +1,66 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function isActive() {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && userDoc().status == 'ACTIVE';
+    }
+    function isAdmin() {
+      return isActive() && userDoc().role == 'ADMIN';
+    }
+
+    match /users/{userId} {
+      // Người dùng chỉ đọc hồ sơ của chính mình; ADMIN đọc tất cả.
+      allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+
+      // Tự tạo hồ sơ lần đầu: luôn PENDING/USER, không tự cấp quyền.
+      // (Tài khoản admin đầu tiên được nâng quyền thủ công trong Firebase Console.)
+      allow create: if isSignedIn()
+        && request.auth.uid == userId
+        && request.resource.data.googleUid == request.auth.uid
+        && request.resource.data.status == 'PENDING'
+        && request.resource.data.role == 'USER';
+
+      // Người dùng chỉ cập nhật thông tin Google của chính mình, không đụng role/status.
+      allow update: if isAdmin()
+        || (isSignedIn() && request.auth.uid == userId
+            && request.resource.data.role == resource.data.role
+            && request.resource.data.status == resource.data.status);
+
+      allow delete: if isAdmin();
+    }
+
+    match /people/{personId} {
+      allow read: if isActive();
+      allow create: if isActive() && request.resource.data.createdBy == request.auth.uid;
+      allow update: if isActive();
+      allow delete: if isAdmin();
+    }
+
+    match /transactions/{transactionId} {
+      allow read: if isActive();
+      allow create: if isActive()
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.amount is number
+        && request.resource.data.amount > 0;
+      // Không xóa cứng: chỉ soft-delete qua update.
+      allow update: if isActive();
+      allow delete: if false;
+
+      match /history/{historyId} {
+        allow read: if isActive();
+        // Audit log chỉ ghi thêm, không sửa, không xóa.
+        allow create: if isActive() && request.resource.data.changedBy == request.auth.uid;
+        allow update, delete: if false;
+      }
+    }
+  }
+}
