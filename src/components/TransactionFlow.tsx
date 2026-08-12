@@ -60,8 +60,8 @@ export function TransactionFlow({
   editing,
   onDone,
 }: {
-  initialPersonId?: string;
-  editing?: Txn;
+  initialPersonId?: string | undefined;
+  editing?: Txn | undefined;
   onDone: () => void;
 }) {
   const { people, txns, user } = useApp();
