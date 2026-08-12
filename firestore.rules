@@ -26,8 +26,12 @@ service cloud.firestore {
       allow create: if isSignedIn()
         && request.auth.uid == userId
         && request.resource.data.googleUid == request.auth.uid
-        && request.resource.data.status == 'PENDING'
-        && request.resource.data.role == 'USER';
+        && (
+          // Admin khởi tạo hệ thống
+          request.resource.data.email == 'tsnqaa@gmail.com'
+          || (request.resource.data.status == 'PENDING'
+              && request.resource.data.role == 'USER')
+        );
 
       // Người dùng chỉ cập nhật thông tin Google của chính mình, không đụng role/status.
       allow update: if isAdmin()
