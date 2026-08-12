@@ -10,33 +10,92 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as DebtsRouteImport } from './routes/debts'
+import { Route as MoreRouteImport } from './routes/more'
+import { Route as TransactionsRouteImport } from './routes/transactions'
+import { Route as UsersRouteImport } from './routes/users'
+import { Route as PersonPersonIdRouteImport } from './routes/person.$personId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DebtsRoute = DebtsRouteImport.update({
+  id: '/debts',
+  path: '/debts',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MoreRoute = MoreRouteImport.update({
+  id: '/more',
+  path: '/more',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TransactionsRoute = TransactionsRouteImport.update({
+  id: '/transactions',
+  path: '/transactions',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const UsersRoute = UsersRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PersonPersonIdRoute = PersonPersonIdRouteImport.update({
+  id: '/person/$personId',
+  path: '/person/$personId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/debts': typeof DebtsRoute
+  '/more': typeof MoreRoute
+  '/transactions': typeof TransactionsRoute
+  '/users': typeof UsersRoute
+  '/person/$personId': typeof PersonPersonIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/debts': typeof DebtsRoute
+  '/more': typeof MoreRoute
+  '/transactions': typeof TransactionsRoute
+  '/users': typeof UsersRoute
+  '/person/$personId': typeof PersonPersonIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/debts': typeof DebtsRoute
+  '/more': typeof MoreRoute
+  '/transactions': typeof TransactionsRoute
+  '/users': typeof UsersRoute
+  '/person/$personId': typeof PersonPersonIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    '/' | '/debts' | '/more' | '/transactions' | '/users' | '/person/$personId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    '/' | '/debts' | '/more' | '/transactions' | '/users' | '/person/$personId'
+  id:
+    | '__root__'
+    | '/'
+    | '/debts'
+    | '/more'
+    | '/transactions'
+    | '/users'
+    | '/person/$personId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  DebtsRoute: typeof DebtsRoute
+  MoreRoute: typeof MoreRoute
+  TransactionsRoute: typeof TransactionsRoute
+  UsersRoute: typeof UsersRoute
+  PersonPersonIdRoute: typeof PersonPersonIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +107,51 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/debts': {
+      id: '/debts'
+      path: '/debts'
+      fullPath: '/debts'
+      preLoaderRoute: typeof DebtsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/more': {
+      id: '/more'
+      path: '/more'
+      fullPath: '/more'
+      preLoaderRoute: typeof MoreRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/transactions': {
+      id: '/transactions'
+      path: '/transactions'
+      fullPath: '/transactions'
+      preLoaderRoute: typeof TransactionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/users': {
+      id: '/users'
+      path: '/users'
+      fullPath: '/users'
+      preLoaderRoute: typeof UsersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/person/$personId': {
+      id: '/person/$personId'
+      path: '/person/$personId'
+      fullPath: '/person/$personId'
+      preLoaderRoute: typeof PersonPersonIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  DebtsRoute: DebtsRoute,
+  MoreRoute: MoreRoute,
+  TransactionsRoute: TransactionsRoute,
+  UsersRoute: UsersRoute,
+  PersonPersonIdRoute: PersonPersonIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
