@@ -11,7 +11,8 @@ import type { User as FirebaseUser } from "firebase/auth";
 import { getDb } from "@/lib/firebase";
 import type { AppUser, UserRole, UserStatus } from "@/types";
 
-const BOOTSTRAP_ADMIN_EMAIL = "tsnqaa@gmail.com";
+// Vite chỉ expose biến có tiền tố VITE_ ra client bundle.
+const ADMIN_EMAIL = (import.meta.env.VITE_ADMIN_EMAIL ?? "").toLowerCase().trim();
 
 function toUser(id: string, d: Record<string, unknown>): AppUser {
   return {
@@ -28,16 +29,15 @@ function toUser(id: string, d: Record<string, unknown>): AppUser {
 }
 
 export const userService = {
-  /** Ensure a user document exists for the signed-in Google account. */
   async ensureProfile(fbUser: FirebaseUser): Promise<AppUser> {
     const db = getDb();
     const ref = doc(db, "users", fbUser.uid);
     const snap = await getDoc(ref);
     const now = Date.now();
+    const email = (fbUser.email ?? "").toLowerCase();
+    const isBootstrapAdmin = !!ADMIN_EMAIL && email === ADMIN_EMAIL;
 
     if (!snap.exists()) {
-      const isBootstrapAdmin =
-        (fbUser.email ?? "").toLowerCase() === BOOTSTRAP_ADMIN_EMAIL;
       const payload = {
         googleUid: fbUser.uid,
         email: fbUser.email ?? "",
@@ -53,16 +53,25 @@ export const userService = {
     }
 
     const data = snap.data();
-    // Keep Google profile fields fresh (role/status are never touched here).
     const patch: Record<string, unknown> = {};
     if (data["email"] !== fbUser.email) patch["email"] = fbUser.email ?? "";
     if (fbUser.displayName && data["name"] !== fbUser.displayName)
       patch["name"] = fbUser.displayName;
     if (fbUser.photoURL && data["avatar"] !== fbUser.photoURL)
       patch["avatar"] = fbUser.photoURL;
+
+    // Tự "chữa lành": nếu là admin bootstrap nhưng doc cũ bị lệch (do bug trước),
+    // luôn đảm bảo role=ADMIN, status=ACTIVE.
+    if (isBootstrapAdmin) {
+      if (data["role"] !== "ADMIN") patch["role"] = "ADMIN";
+      if (data["status"] !== "ACTIVE") patch["status"] = "ACTIVE";
+    }
+
     if (Object.keys(patch).length) {
       patch["updatedAt"] = Date.now();
-      await updateDoc(ref, patch).catch(() => undefined);
+      await updateDoc(ref, patch).catch((e) =>
+        console.error("ensureProfile patch failed", e),
+      );
     }
     return toUser(snap.id, { ...data, ...patch });
   },

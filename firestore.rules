@@ -2,42 +2,80 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    function userDoc() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    // === Nguồn sự thật (source of truth) cho admin bootstrap ===
+    // Sửa giá trị này khi đổi ADMIN_EMAIL, rồi deploy lại:
+    //   firebase deploy --only firestore:rules
+    function bootstrapAdminEmail() {
+      return "YOUR_REAL_ADMIN_EMAIL@gmail.com"; // <-- thay bằng email admin thật
     }
+
     function isSignedIn() {
       return request.auth != null;
     }
+
+    // Email đã được Google xác thực trong ID token — client KHÔNG thể giả mạo.
+    function authEmail() {
+      return request.auth.token.email;
+    }
+
+    function isBootstrapAdmin() {
+      return isSignedIn()
+        && request.auth.token.email_verified == true
+        && authEmail() == bootstrapAdminEmail();
+    }
+
+    function userExists() {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    // Admin bootstrap luôn được coi là ACTIVE, kể cả khi collection users
+    // chưa có document nào (chưa kịp ensureProfile()).
     function isActive() {
       return isSignedIn()
-        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
-        && userDoc().status == 'ACTIVE';
+        && (
+          isBootstrapAdmin()
+          || (userExists() && userDoc().status == 'ACTIVE')
+        );
     }
+
     function isAdmin() {
-      return isActive() && userDoc().role == 'ADMIN';
+      return isSignedIn()
+        && (
+          isBootstrapAdmin()
+          || (userExists() && userDoc().status == 'ACTIVE' && userDoc().role == 'ADMIN')
+        );
     }
 
     match /users/{userId} {
-      // Người dùng chỉ đọc hồ sơ của chính mình; ADMIN đọc tất cả.
       allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin());
 
-      // Tự tạo hồ sơ lần đầu: luôn PENDING/USER, không tự cấp quyền.
-      // (Tài khoản admin đầu tiên được nâng quyền thủ công trong Firebase Console.)
       allow create: if isSignedIn()
         && request.auth.uid == userId
         && request.resource.data.googleUid == request.auth.uid
+        // email lưu trong doc PHẢI khớp email đã xác thực của token, không tin client
+        && request.resource.data.email == authEmail()
         && (
-          // Admin khởi tạo hệ thống
-          request.resource.data.email == 'tsnqaa@gmail.com'
-          || (request.resource.data.status == 'PENDING'
-              && request.resource.data.role == 'USER')
+          (isBootstrapAdmin()
+            && request.resource.data.role == 'ADMIN'
+            && request.resource.data.status == 'ACTIVE')
+          || (!isBootstrapAdmin()
+            && request.resource.data.role == 'USER'
+            && request.resource.data.status == 'PENDING')
         );
 
-      // Người dùng chỉ cập nhật thông tin Google của chính mình, không đụng role/status.
       allow update: if isAdmin()
         || (isSignedIn() && request.auth.uid == userId
             && request.resource.data.role == resource.data.role
-            && request.resource.data.status == resource.data.status);
+            && request.resource.data.status == resource.data.status)
+        // Tự "chữa lành": nếu email là admin bootstrap, luôn được phép tự sửa
+        // lại role/status về ADMIN/ACTIVE (phòng trường hợp doc cũ bị sai do bug).
+        || (isBootstrapAdmin() && request.auth.uid == userId
+            && request.resource.data.role == 'ADMIN'
+            && request.resource.data.status == 'ACTIVE');
 
       allow delete: if isAdmin();
     }
@@ -55,13 +93,11 @@ service cloud.firestore {
         && request.resource.data.createdBy == request.auth.uid
         && request.resource.data.amount is number
         && request.resource.data.amount > 0;
-      // Không xóa cứng: chỉ soft-delete qua update.
       allow update: if isActive();
       allow delete: if false;
 
       match /history/{historyId} {
         allow read: if isActive();
-        // Audit log chỉ ghi thêm, không sửa, không xóa.
         allow create: if isActive() && request.resource.data.changedBy == request.auth.uid;
         allow update, delete: if false;
       }
