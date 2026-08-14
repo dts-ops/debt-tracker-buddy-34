@@ -10,11 +10,11 @@ import {
 } from "@/components/GateScreens";
 import { TransactionFlow } from "@/components/TransactionFlow";
 import {
-  Drawer,
-  DrawerContent,
-  DrawerHeader,
-  DrawerTitle,
-} from "@/components/ui/drawer";
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import type { Txn } from "@/types";
 import { LayoutGrid, Users, Receipt, Plus, MoreHorizontal, UserCog, CloudOff } from "lucide-react";
