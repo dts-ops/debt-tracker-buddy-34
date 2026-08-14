@@ -12,7 +12,7 @@ import { getDb } from "@/lib/firebase";
 import type { AppUser, UserRole, UserStatus } from "@/types";
 
 // Email admin khởi tạo (phải khớp với firestore.rules).
-const ADMIN_EMAIL = (import.meta.env.VITE_ADMIN_EMAIL ?? "heosat0710@gmail.com")
+const ADMIN_EMAIL = (import.meta.env["VITE_ADMIN_EMAIL"] ?? "heosat0710@gmail.com")
   .toLowerCase()
   .trim();
 
